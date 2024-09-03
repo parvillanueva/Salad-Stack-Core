@@ -1,5 +1,5 @@
 <?php
-namespace Lettuce\Core;
+namespace Salad\Core;
 
 class Controller
 {

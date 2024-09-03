@@ -1,6 +1,6 @@
 <?php
 
-use Lettuce\Core\Application;
+use Salad\Core\Application;
 use PHPUnit\Framework\TestCase;
 
 class ApplicationTest extends TestCase
