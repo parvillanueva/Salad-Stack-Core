@@ -26,6 +26,7 @@ class TwigExtension extends AbstractExtension
         new TwigFunction('get_site_description', [$this, 'getSiteDescription']),
         new TwigFunction('get_site_favicon', [$this, 'getSiteFavicon']),
         new TwigFunction('get_base_url', [$this, 'getBaseUrl']),
+        new TwigFunction('get_flash_message', [$this, 'getFlashMessage']),
       ];
     }
 
@@ -35,6 +36,11 @@ class TwigExtension extends AbstractExtension
         new TwigFilter('uppercase', [$this, 'toUppercase']),
         new TwigFilter('base_url', [$this, 'baseUrl']),
       ];
+    }
+
+    public function getFlashMessage($key)
+    {
+      return Application::$app->session->getFlash($key);
     }
 
     public function getSiteTitle(): string

@@ -31,7 +31,7 @@ class Request
         return $this->getMethod() === 'post';
     }
 
-    public function getBody()
+    public function getBody($params = null)
     {
         $data = [];
         if ($this->isGet()) {
@@ -43,6 +43,9 @@ class Request
             foreach ($_POST as $key => $value) {
                 $data[$key] = filter_input(INPUT_POST, $key, FILTER_SANITIZE_SPECIAL_CHARS);
             }
+        }
+        if($params){
+            return $data[$params] ?? null;
         }
         return $data;
     }
