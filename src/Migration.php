@@ -11,7 +11,7 @@ class Migration
     public function __construct(PDO $pdo, $rootDir)
     {
         $this->pdo = $pdo;
-        $this->ROOT_DIR = $rootDir . "/src/Migrations/";
+        $this->ROOT_DIR = Application::$ROOT_DIR . "/src/Migrations/";
         $this->createMigrationsTable();
     }
 
@@ -59,8 +59,6 @@ class Migration
             $instance = new $migrationClass();
             $instance->up($this->pdo);
             $this->saveMigration($migration);
-
-            echo "Applied migration: $migration\n";
         }
 
         if (empty($toApplyMigrations)) {
@@ -83,8 +81,6 @@ class Migration
         $instance->down($this->pdo);
 
         $this->deleteMigration($lastAppliedMigration);
-
-        echo "Rolled back migration: $lastAppliedMigration\n";
     }
 
     public function runSpecificMigration($migration)
@@ -101,7 +97,6 @@ class Migration
         $instance->up($this->pdo);
 
         $this->saveMigration($migration);
-        echo "Applied migration: $migration\n";
     }
 
     public function rollbackSpecificMigration($migration)
@@ -118,7 +113,6 @@ class Migration
         $instance->down($this->pdo);
 
         $this->deleteMigration($migration);
-        echo "Rolled back migration: $migration\n";
     }
 
 }
