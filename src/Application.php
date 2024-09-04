@@ -9,6 +9,7 @@ class Application
     public Response $response;
     public Request $request;
     public Session $session;
+    public Extension $extension;
     public Database $db;
     
     public function __construct($rootDir)
@@ -18,6 +19,7 @@ class Application
       $this->request = new Request();
       $this->response = new Response();
       $this->session = new Session();
+      $this->extension = new Extension();
       $this->db = new Database();
     }
 }

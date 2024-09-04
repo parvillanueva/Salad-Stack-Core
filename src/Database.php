@@ -43,10 +43,10 @@ class Database
      * @param array $params Optional parameters for prepared statements.
      * @return array|null
      */
-    public function fetch(string $sql, array $params = []): ?array
+    public function fetch(string $sql, array $params = [])
     {
         $stmt = $this->query($sql, $params);
-        return $stmt ? $stmt->fetch(PDO::FETCH_ASSOC) : null;
+        return $stmt ? $stmt->fetch(PDO::FETCH_ASSOC) : [];
     }
 
     /**

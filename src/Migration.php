@@ -2,6 +2,7 @@
 namespace Salad\Core;
 
 use PDO;
+use Salad\Core\Application;
 
 class Migration
 {

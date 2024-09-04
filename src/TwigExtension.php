@@ -9,14 +9,20 @@ use Twig\TwigFilter;
 use Salad\Core\Application;
 use Salad\Core\Database;
 
+use App\Models\User;
+
 class TwigExtension extends AbstractExtension
 {
 
+    private $App;
     private $db;
+    protected $user;
 
     public function __construct()
     {
+      $this->App = Application::$app;
       $this->db = new Database();
+      $this->user = new User;
     }
     
     public function getFunctions(): array
@@ -27,6 +33,9 @@ class TwigExtension extends AbstractExtension
         new TwigFunction('get_site_favicon', [$this, 'getSiteFavicon']),
         new TwigFunction('get_base_url', [$this, 'getBaseUrl']),
         new TwigFunction('get_flash_message', [$this, 'getFlashMessage']),
+        new TwigFunction('get_extensions', [$this, 'getExtensions']),
+        new TwigFunction('check_extension_enabled', [$this, 'checkExtensionEnabled']),
+        new TwigFunction('get_logged_email', [$this, 'getLoggedEmail']),
       ];
     }
 
@@ -41,6 +50,18 @@ class TwigExtension extends AbstractExtension
     public function getFlashMessage($key)
     {
       return Application::$app->session->getFlash($key);
+    }
+
+    public function getLoggedEmail()
+    {
+      $userId = $this->App->session->get('user_id');
+      $stmt = $this->user->findById($userId);
+      return $stmt['email'];
+    }
+
+    public function getExtensions($type): array
+    {
+      return Application::$app->extension->getExtensions()[$type];
     }
 
     public function getSiteTitle(): string
@@ -77,6 +98,20 @@ class TwigExtension extends AbstractExtension
     public function baseUrl(string $url): string
     {
       return $this->getBaseUrl() . $url;
+    }
+
+    public function checkExtensionEnabled(string $name): string
+    {
+
+      $name = strtoupper(preg_replace('/[^A-Za-z0-9]+/', '_', $name));
+      try {
+        if(isset($_ENV['EXTENSION_' . $name]) && $_ENV['EXTENSION_' . $name] === 'true'){
+          return true;
+        }
+        return false;
+      } catch (\Throwable $th) {
+        return false;
+      }
     }
 
     
