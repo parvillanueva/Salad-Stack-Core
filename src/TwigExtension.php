@@ -33,6 +33,7 @@ class TwigExtension extends AbstractExtension
     {
       return [
         new TwigFilter('uppercase', [$this, 'toUppercase']),
+        new TwigFilter('base_url', [$this, 'baseUrl']),
       ];
     }
 
@@ -66,5 +67,12 @@ class TwigExtension extends AbstractExtension
     {
       return strtoupper($text);
     }
+
+    public function baseUrl(string $url): string
+    {
+      return $this->getBaseUrl() . $url;
+    }
+
+    
 
 }
