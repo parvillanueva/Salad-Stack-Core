@@ -25,7 +25,7 @@ class View
         $this->twig = new Environment($loader, [
             'cache' => false,
         ]);
-        $this->twig ->addExtension(new TwigExtension());
+        $this->twig->addExtension(new TwigExtension());
         $this->twig->addFunction(new \Twig\TwigFunction('asset', function ($path) {
             return $this->getBaseUrl() ."/" . ltrim($path, '/');
         }));
@@ -54,6 +54,14 @@ class View
         if(!$userId){
             $this->App->response->redirect("/admin/login");
         }
+    }
+
+    public function getTwigEnv() {
+        return $this->twig;
+    }
+
+    public function addTwixExtension($extension_path) {
+        $this->twig->addExtension($extension_path);
     }
 
     public function render($view, $data = [])

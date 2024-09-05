@@ -47,7 +47,16 @@ class Request
         if($params){
             return $data[$params] ?? null;
         }
+        
         return $data;
+    }
+
+    public function getAll()
+    {
+        return [
+            'data' => $_SERVER['REQUEST_METHOD'] === 'POST' ? $_POST : $_GET,
+            'files' => $_FILES
+        ];
     }
 
     /**

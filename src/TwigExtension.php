@@ -8,7 +8,7 @@ use Twig\TwigFilter;
 
 use Salad\Core\Application;
 use Salad\Core\Database;
-
+use Salad\Core\BaseComponent;
 use App\Models\User;
 
 class TwigExtension extends AbstractExtension
@@ -36,6 +36,9 @@ class TwigExtension extends AbstractExtension
         new TwigFunction('get_extensions', [$this, 'getExtensions']),
         new TwigFunction('check_extension_enabled', [$this, 'checkExtensionEnabled']),
         new TwigFunction('get_logged_email', [$this, 'getLoggedEmail']),
+        new TwigFunction('get_request_uri', [$this, 'getRequestURI']),
+        new TwigFunction('render_component', [$this, 'renderComponent']),
+        new TwigFunction('parse_value', [$this, 'parseTableValue']),
       ];
     }
 
@@ -44,12 +47,40 @@ class TwigExtension extends AbstractExtension
       return [
         new TwigFilter('uppercase', [$this, 'toUppercase']),
         new TwigFilter('base_url', [$this, 'baseUrl']),
+        new TwigFilter('css', [$this, 'renderCSS']),
       ];
     }
+    
 
     public function getFlashMessage($key)
     {
       return Application::$app->session->getFlash($key);
+    }
+
+    public function parseTableValue($key, $value)
+    {
+      if($key == 'status'){
+        return $value == 1? "Visible":"Hidden";
+      }
+      if($this->isValidImageUrl($value)){
+        return "<img src='$value' width='200' />";
+      }
+      return $value;
+    }
+    
+    function isValidImageUrl($url) {
+      $imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'];
+      $extension = pathinfo($url, PATHINFO_EXTENSION);
+
+      return in_array(strtolower($extension), $imageExtensions);
+  }
+    
+
+    public function renderCSS($css_path)
+    {
+      $inlineCss = file_get_contents($css_path);
+
+      return "<style>$inlineCss</style>";
     }
 
     public function getLoggedEmail()
@@ -57,6 +88,10 @@ class TwigExtension extends AbstractExtension
       $userId = $this->App->session->get('user_id');
       $stmt = $this->user->findById($userId);
       return $stmt['email'];
+    }
+    public function getRequestURI()
+    {
+      return $_SERVER['REQUEST_URI'];
     }
 
     public function getExtensions($type): array
