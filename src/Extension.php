@@ -106,16 +106,6 @@ class Extension
     ];
   }
 
-
-  public function getBaseUrl() {
-    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
-    $hostName = $_SERVER['HTTP_HOST'];
-    $scriptPath = dirname($_SERVER['SCRIPT_NAME']);
-    $baseUrl = $protocol . $hostName . $scriptPath;
-    return rtrim($baseUrl, '/');
-  }
-
-
   function normalizePath($path) {
     $parts = explode('/', $path);
     $stack = [];
@@ -152,7 +142,7 @@ class Extension
 
     
     // Start building the form HTML
-    $formHtml = '<form action="'. $this->getBaseUrl().'/admin/extension/form-submit" method="POST"  enctype="multipart/form-data">';
+    $formHtml = '<form action="'. Application::$app->getBaseUrl().'/admin/extension/form-submit" method="POST"  enctype="multipart/form-data">';
     if(!$id){
       $formHtml .= '<h2>' . $formConfig['form']['title'] . '</h2>';
       $formHtml .= '<p>' . $formConfig['form']['description'] . '</p>';

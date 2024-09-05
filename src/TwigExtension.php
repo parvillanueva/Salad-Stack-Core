@@ -125,11 +125,7 @@ class TwigExtension extends AbstractExtension
     }
 
     public function getBaseUrl() {
-      $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
-      $hostName = $_SERVER['HTTP_HOST'];
-      $scriptPath = dirname($_SERVER['SCRIPT_NAME']);
-      $baseUrl = $protocol . $hostName . $scriptPath;
-      return rtrim($baseUrl, '/');
+      return Application::$app->getBaseUrl();
     }
 
     public function toUppercase(string $text): string
@@ -139,7 +135,7 @@ class TwigExtension extends AbstractExtension
 
     public function baseUrl(string $url): string
     {
-      return $this->getBaseUrl() . $url;
+      return Application::$app->getBaseUrl() . $url;
     }
 
     public function checkExtensionEnabled(string $name): string

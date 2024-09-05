@@ -27,16 +27,8 @@ class View
         ]);
         $this->twig->addExtension(new TwigExtension());
         $this->twig->addFunction(new \Twig\TwigFunction('asset', function ($path) {
-            return $this->getBaseUrl() ."/" . ltrim($path, '/');
+            return Application::$app->getBaseUrl() ."/" . ltrim($path, '/');
         }));
-    }
-
-    function getBaseUrl() {
-        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
-        $hostName = $_SERVER['HTTP_HOST'];
-        $scriptPath = dirname($_SERVER['SCRIPT_NAME']);
-        $baseUrl = $protocol . $hostName . $scriptPath;
-        return rtrim($baseUrl, '/');
     }
 
     public function addViewPath($path)
