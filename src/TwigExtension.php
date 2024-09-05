@@ -39,6 +39,7 @@ class TwigExtension extends AbstractExtension
         new TwigFunction('get_request_uri', [$this, 'getRequestURI']),
         new TwigFunction('render_component', [$this, 'renderComponent']),
         new TwigFunction('parse_value', [$this, 'parseTableValue']),
+        new TwigFunction('get_update_form', [$this, 'getUpdateForm']),
       ];
     }
 
@@ -89,6 +90,12 @@ class TwigExtension extends AbstractExtension
       $stmt = $this->user->findById($userId);
       return $stmt['email'];
     }
+
+    public function getUpdateForm($table, $id)
+    {
+      return $this->App->extension->getUpdateForm($table, false, $id);
+    }
+
     public function getRequestURI()
     {
       return $_SERVER['REQUEST_URI'];

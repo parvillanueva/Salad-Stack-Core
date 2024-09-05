@@ -72,6 +72,13 @@ class Extension
     return Application::$app->db->fetchAll("SELECT * FROM $table");
   }
 
+  public function getType($package_name){
+    $package = $this->getFeature($package_name);
+
+    $package_path = Application::$ROOT_DIR ."/vendor/" . $this->normalizePath($package['install-path'] . "/forms/admin.yml");
+    $formConfig = Yaml::parseFile($package_path);
+    return $formConfig['form']['type'];
+  }
 
   public function getForm($package_name, $admin = false, $id = null){
     $package = $this->getFeature($package_name);
@@ -81,6 +88,19 @@ class Extension
     return [
       "type" => $formConfig['form']['type'],
       "title" => $formConfig['form']['title'],
+      "table" => $formConfig['form']['table'],
+      "form" => $this->generateFormFromYaml($package_path, $id)
+    ];
+  }
+
+  public function getUpdateForm($package_name, $admin = false, $id = null){
+    $package = $this->getFeature($package_name);
+
+    $package_path = Application::$ROOT_DIR ."/vendor/" . $this->normalizePath($package['install-path'] . "/forms/admin.yml");
+    $formConfig = Yaml::parseFile($package_path);
+    return [
+      "type" => $formConfig['form']['type'],
+      "title" => "Update" . $formConfig['form']['title'],
       "table" => $formConfig['form']['table'],
       "form" => $this->generateFormFromYaml($package_path, $id)
     ];
@@ -133,10 +153,15 @@ class Extension
     
     // Start building the form HTML
     $formHtml = '<form action="'. $this->getBaseUrl().'/admin/extension/form-submit" method="POST"  enctype="multipart/form-data">';
-    $formHtml .= '<h2>' . $formConfig['form']['title'] . '</h2>';
-    $formHtml .= '<p>' . $formConfig['form']['description'] . '</p>';
+    if(!$id){
+      $formHtml .= '<h2>' . $formConfig['form']['title'] . '</h2>';
+      $formHtml .= '<p>' . $formConfig['form']['description'] . '</p>';
+    }
     $formHtml .= '<input type="text" name="table" hidden value="' . $formConfig['form']['table'] . '" />';
     $formHtml .= '<input type="text" name="type" hidden value="' . $formConfig['form']['type'] . '" />';
+    if($id){
+      $formHtml .= '<input type="text" name="id" hidden value="' . $id . '" />';
+    }
 
 
     // Loop through the fields and generate HTML elements
@@ -161,7 +186,7 @@ class Extension
               if (!empty($field['required'])) {
                   $formHtml .= ' required';
               }
-              $formHtml .= ' value="' . $this->getFormValue($table, $field['name'], $id) .  '" ';
+              $formHtml .= ' accept="image/*" value="' . $this->getFormValue($table, $field['name'], $id) .  '" ';
               $formHtml .= ' class="form-control">';
               break;
 
@@ -176,7 +201,7 @@ class Extension
             case 'radio':
                 foreach ($field['options'] as $option) {
                     $formHtml .= '<div class="form-check">';
-                    $formHtml .= '<input type="radio" ' . ($this->getFormValue($table, $field['name'], $id) == htmlspecialchars($option['value']) ? "selected" : "") . ' name="' . $field['name'] . '" placeholder="' . $field['placeholder'] . '" id="' . $field['name'] . '_' . htmlspecialchars($option['value']) . '" value="' . htmlspecialchars($option['value']) . '"';
+                    $formHtml .= '<input type="radio" ' . ($this->getFormValue($table, $field['name'], $id) == htmlspecialchars($option['value']) ? "checked" : "") . ' name="' . $field['name'] . '" placeholder="' . $field['placeholder'] . '" id="' . $field['name'] . '_' . htmlspecialchars($option['value']) . '" value="' . htmlspecialchars($option['value']) . '"';
                     if (!empty($field['required'])) {
                       $formHtml .= ' required';
                     }
@@ -190,12 +215,12 @@ class Extension
                 if (!empty($field['options'])) {
                     foreach ($field['options'] as $option) {
                         $formHtml .= '<div class="form-check">';
-                        $formHtml .= '<input ' . ($this->getFormValue($table, $field['name'], $id) == htmlspecialchars($option['value']) ? "selected" : "") . ' type="checkbox" name="' . $field['name'] . '[]" id="' . $field['name'] . '" placeholder="' . $field['placeholder'] . '_' . htmlspecialchars($option) . '" value="' . htmlspecialchars($option) . '" class="form-check-input">';
+                        $formHtml .= '<input ' . ($this->getFormValue($table, $field['name'], $id) == htmlspecialchars($option['value']) ? "checked" : "") . ' type="checkbox" name="' . $field['name'] . '[]" id="' . $field['name'] . '" placeholder="' . $field['placeholder'] . '_' . htmlspecialchars($option) . '" value="' . htmlspecialchars($option) . '" class="form-check-input">';
                         $formHtml .= '<label for="' . $field['name'] . '_' . htmlspecialchars($option) . '" class="form-check-label">' . htmlspecialchars($option) . '</label>';
                         $formHtml .= '</div>';
                     }
                 } else {
-                    $formHtml .= '<input type="checkbox" ' . ($this->getFormValue($table, $field['name'], $id) == htmlspecialchars($option['value']) ? "selected" : "") . ' name="' . $field['name'] . '" id="' . $field['name'] . '"';
+                    $formHtml .= '<input type="checkbox" ' . ($this->getFormValue($table, $field['name'], $id) == htmlspecialchars($option['value']) ? "checked" : "") . ' name="' . $field['name'] . '" id="' . $field['name'] . '"';
                     if (!empty($field['required'])) {
                         $formHtml .= ' required';
                     }
