@@ -39,14 +39,30 @@ class Extension
 		foreach ($installed['packages'] as $package) {
 			if($package['type'] == "salad-section"){
 				if($package['extra']['salad-extension']['category'] == 'feature'){
-					$sections[] = [
-						"id" => $package['name'],
-						"title" => $package['extra']['salad-extension']['title'],
-					];
+					//check if active
+					if($this->checkExtensionEnabled($package['name'])){
+						$sections[] = [
+							"id" => $package['name'],
+							"title" => $package['extra']['salad-extension']['title'],
+						];
+					}
 				}
 			}
 		}
 		return $sections;
+	}
+
+	public function checkExtensionEnabled(string $name): string
+	{
+		$name = strtoupper(preg_replace('/[^A-Za-z0-9]+/', '_', $name));
+		try {
+			if(isset($_ENV['EXTENSION_' . $name]) && $_ENV['EXTENSION_' . $name] === 'true'){
+			return true;
+			}
+			return false;
+		} catch (\Throwable $th) {
+			return false;
+		}
 	}
 
 	public function getThemes()

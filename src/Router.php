@@ -47,7 +47,7 @@ class Router
         // Try to match the request to a route
         if (isset($this->routes[$method])) {
             foreach ($this->routes[$method] as $route => $routeConfig) {
-                $routePattern = preg_replace('/\{([a-zA-Z0-9_]+)\}/', '([a-zA-Z0-9_]+)', $route);
+                $routePattern = preg_replace('/\{([a-zA-Z0-9_]+)\}/', '([a-zA-Z0-9_-]+)', $route);
                 if (preg_match("#^$routePattern$#", $path, $matches)) {
                     array_shift($matches); // Remove the full match from the beginning of the array
 

@@ -10,6 +10,8 @@
 	use Salad\Core\Database;
 	use Salad\Core\BaseComponent;
 	use App\Models\User;
+	use App\Models\Page;
+	use App\Models\Menu;
 
 	class TwigExtension extends AbstractExtension
 	{
@@ -17,12 +19,16 @@
 		private $app;
 		private $db;
 		protected $user;
+		private $page;
+		private $menu;
 
 		public function __construct()
 		{
 			$this->app = Application::$app;
 			$this->db = new Database();
 			$this->user = new User;
+			$this->page = new Page;
+			$this->menu = new Menu;
 		}
 		
 		public function getFunctions(): array
@@ -40,6 +46,7 @@
 				new TwigFunction('render_component', [$this, 'renderComponent']),
 				new TwigFunction('parse_value', [$this, 'parseTableValue']),
 				new TwigFunction('get_update_form', [$this, 'getUpdateForm']),
+				new TwigFunction('get_site_menu', [$this, 'getSiteMenu']),
 			];
 		}
 
@@ -142,16 +149,15 @@
 
 		public function checkExtensionEnabled(string $name): string
 		{
-
-		$name = strtoupper(preg_replace('/[^A-Za-z0-9]+/', '_', $name));
-		try {
-			if(isset($_ENV['EXTENSION_' . $name]) && $_ENV['EXTENSION_' . $name] === 'true'){
-			return true;
+			$name = strtoupper(preg_replace('/[^A-Za-z0-9]+/', '_', $name));
+			try {
+				if(isset($_ENV['EXTENSION_' . $name]) && $_ENV['EXTENSION_' . $name] === 'true'){
+				return true;
+				}
+				return false;
+			} catch (\Throwable $th) {
+				return false;
 			}
-			return false;
-		} catch (\Throwable $th) {
-			return false;
-		}
 		}
 
 		public function removeImgTags($content)
@@ -170,6 +176,50 @@
 			$text = trim($text, '-');
 			
 			return $text;
+		}
+		
+		public function getSiteMenu()
+		{
+			$menus = $this->menu->fetchAll();
+			$data = [];
+			foreach ($menus as $key => $value) {
+				$sub_menus = $this->menu->fetchSubMenu($value['id']);
+				$page_url = null;
+				if($value['page_id']){
+					$page_url = $this->page->findById($value['page_id'])['slug'];
+				}
+
+				$data[] = [
+				"index" => $key,
+				"menu"  => $value['menu'],
+				"menu_url"  => $sub_menus ? null : $page_url,
+				"submenu"   => $this->getSubMenu($value['id'])
+				];
+			}
+
+			return $data;
+		}
+		
+		public function getSubMenu($parent_id)
+		{
+			$menus = $this->menu->fetchSubMenu($parent_id);
+			$data = [];
+			foreach ($menus as $key => $value) {
+				$sub_menus = $this->menu->fetchSubMenu($value['id']);
+				$page_url = null;
+				if($value['page_id']){
+					$page_url = $this->page->findById($value['page_id'])['slug'];
+				}
+
+				$data[] = [
+				"index" => $key,
+				"menu"  => $value['menu'],
+				"menu_url"  => $sub_menus ? null : $page_url,
+				// "submenu"   => $sub_menus
+				];
+			}
+
+			return $data;
 		}
 
 	}
