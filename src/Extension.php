@@ -6,227 +6,243 @@ use Symfony\Component\Yaml\Yaml;
 
 class Extension
 {
-    protected $VENDOR_DIR;
-    protected $features;
-    protected $themes;
+	protected $VENDOR_DIR;
+	protected $features;
+	protected $themes;
 
-    public function __construct()
+	public function __construct()
+	{
+		$this->VENDOR_DIR = Application::$ROOT_DIR . "/vendor/";
+		$this->features = [];
+		$this->themes = [];
+
+		$this->getFeatures();
+		$this->getThemes();
+	}
+
+	public function getFeatures()
+	{
+		$installed = json_decode(file_get_contents($this->VENDOR_DIR . "/composer/installed.json"), true);
+		foreach ($installed['packages'] as $package) {
+			if($package['type'] == "salad-extension" || $package['type'] == "salad-section"){
+				if($package['extra']['salad-extension']['category'] == 'feature'){
+					$this->features[] = $package;
+				}
+			}
+		}
+	}
+
+	public function getSections()
+	{
+		$sections = [];
+		$installed = json_decode(file_get_contents($this->VENDOR_DIR . "/composer/installed.json"), true);
+		foreach ($installed['packages'] as $package) {
+			if($package['type'] == "salad-section"){
+				if($package['extra']['salad-extension']['category'] == 'feature'){
+					$sections[] = [
+						"id" => $package['name'],
+						"title" => $package['extra']['salad-extension']['title'],
+					];
+				}
+			}
+		}
+		return $sections;
+	}
+
+	public function getThemes()
+	{
+		$installed = json_decode(file_get_contents($this->VENDOR_DIR . "/composer/installed.json"), true);
+		foreach ($installed['packages'] as $package) {
+			if($package['type'] == "salad-extension"){
+				if($package['extra']['salad-extension']['category'] == 'theme'){
+					$this->themes[] = $package;
+				}
+			}
+		}
+	}
+
+	public function getExtensions()
+	{
+		return [
+			"features" => $this->features,
+			"themes" => $this->themes,
+		];
+	}
+
+	public function getFeatureList()
+	{
+		return $this->features;
+	}
+
+	public function getFeature($package)
+	{
+		foreach ($this->features as $object) {
+			if ($object['name'] === $package) {
+				return $object;
+				break;
+			}
+		}
+	}
+
+	public function getTable(string $table): array
+	{
+		return Application::$app->db->fetchAll("SELECT * FROM $table");
+	}
+
+	public function getType(string $packageName): string
     {
-      $this->VENDOR_DIR = Application::$ROOT_DIR . "/vendor/";
-      $this->features = [];
-      $this->themes = [];
-
-      $this->getFeatures();
-      $this->getThemes();
+        $formConfig = $this->getFormConfig($packageName);
+        return $formConfig['form']['type'] ?? '';
     }
 
-    public function getFeatures()
+	private function getFormConfig(string $packageName): array
     {
-      $installed = json_decode(file_get_contents($this->VENDOR_DIR . "/composer/installed.json"), true);
-      foreach ($installed['packages'] as $package) {
-        if($package['type'] == "salad-extension" || $package['type'] == "salad-section"){
-          if($package['extra']['salad-extension']['category'] == 'feature'){
-            $this->features[] = $package;
-          }
-        }
-      }
+        $package = $this->getFeature($packageName);
+        $packagePath = $this->VENDOR_DIR . Application::$app->normalizePath($package['install-path'] . "/forms/admin.yml");
+        return Yaml::parseFile($packagePath);
     }
 
-    public function getThemes()
+	public function getForm(string $package_name, bool $admin = false, ?int $id = null): array
+	{
+		$package = $this->getFeature($package_name);
+
+		$package_path = Application::$ROOT_DIR ."/vendor/" . Application::$app->normalizePath($package['install-path'] . "/forms/admin.yml");
+		$formConfig = Yaml::parseFile($package_path);
+		return [
+			"type" => $formConfig['form']['type'],
+			"title" => $formConfig['form']['title'],
+			"table" => $formConfig['form']['table'],
+			"form" => $this->generateFormFromYaml($package_path, $id)
+		];
+	}
+
+	public function getUpdateForm($package_name, $admin = false, $id = null): array
+	{
+		$package = $this->getFeature($package_name);
+
+		$package_path = Application::$ROOT_DIR ."/vendor/" . Application::$app->normalizePath($package['install-path'] . "/forms/admin.yml");
+		$formConfig = Yaml::parseFile($package_path);
+		return [
+			"type" => $formConfig['form']['type'],
+			"title" => "Update" . $formConfig['form']['title'],
+			"table" => $formConfig['form']['table'],
+			"form" => $this->generateFormFromYaml($package_path, $id)
+		];
+	}
+
+	public function getFormValue(string $table, string $field, ?int $id = null): ?string
     {
-      $installed = json_decode(file_get_contents($this->VENDOR_DIR . "/composer/installed.json"), true);
-      foreach ($installed['packages'] as $package) {
-        if($package['type'] == "salad-extension"){
-          if($package['extra']['salad-extension']['category'] == 'theme'){
-            $this->themes[] = $package;
-          }
+        if ($id) {
+            $stmt = Application::$app->db->fetch("SELECT $field FROM $table WHERE id = ?", [$id]);
+            return $stmt[$field] ?? null;
         }
-      }
+        return null;
     }
 
-    public function getExtensions()
-    {
-      return [
-        "features" => $this->features,
-        "themes" => $this->themes,
-      ];
-    }
+  public function generateFormFromYaml(string $yamlFile, ?int $id = null): string
+	{
+		$formConfig = Yaml::parseFile($yamlFile);
+		$table = $formConfig['form']['table'];
 
-    public function getFeatureList()
-    {
-      return $this->features;
-    }
+		$formHtml = '<form action="' . Application::$app->getBaseUrl() . '/admin/extension/form-submit" method="POST" enctype="multipart/form-data">';
+		$formHtml .= $this->generateFormFields($formConfig['form'], $table, $id);
+		$formHtml .= '<button type="submit" class="btn btn-primary">Submit</button>';
+		$formHtml .= '</form>';
 
-    public function getFeature($package)
-    {
-      foreach ($this->features as $object) {
-        if ($object['name'] === $package) {
-            return $object;
-            break;
-        }
-      }
-    }
+		return $formHtml;
+	}
 
+	private function generateFormFields(array $formConfig, string $table, ?int $id = null): string
+	{
+		$formHtml = '';
+		
+		if (!$id) {
+			$formHtml .= '<h2>' . htmlspecialchars($formConfig['title']) . '</h2>';
+			$formHtml .= '<p>' . htmlspecialchars($formConfig['description']) . '</p>';
+		}
 
-  public function getTable($table, $search = null){
-    return Application::$app->db->fetchAll("SELECT * FROM $table");
-  }
+		$formHtml .= '<input type="hidden" name="table" value="' . htmlspecialchars($formConfig['table']) . '">';
+		$formHtml .= '<input type="hidden" name="type" value="' . htmlspecialchars($formConfig['type']) . '">';
 
-  public function getType($package_name){
-    $package = $this->getFeature($package_name);
+		if ($id) {
+			$formHtml .= '<input type="hidden" name="id" value="' . htmlspecialchars($id) . '">';
+		}
 
-    $package_path = Application::$ROOT_DIR ."/vendor/" . $this->normalizePath($package['install-path'] . "/forms/admin.yml");
-    $formConfig = Yaml::parseFile($package_path);
-    return $formConfig['form']['type'];
-  }
+		foreach ($formConfig['fields'] as $field) {
+			$formHtml .= $this->generateFieldHtml($field, $table, $id);
+		}
 
-  public function getForm($package_name, $admin = false, $id = null){
-    $package = $this->getFeature($package_name);
+		return $formHtml;
+	}
 
-    $package_path = Application::$ROOT_DIR ."/vendor/" . $this->normalizePath($package['install-path'] . "/forms/admin.yml");
-    $formConfig = Yaml::parseFile($package_path);
-    return [
-      "type" => $formConfig['form']['type'],
-      "title" => $formConfig['form']['title'],
-      "table" => $formConfig['form']['table'],
-      "form" => $this->generateFormFromYaml($package_path, $id)
-    ];
-  }
+	private function generateFieldHtml(array $field, string $table, ?int $id): string
+	{
+		$value = $this->getFormValue($table, $field['name'], $id);
+		$html = '<div class="form-group">';
+		$html .= '<label for="' . htmlspecialchars($field['name']) . '">' . htmlspecialchars($field['label']) . '</label>';
 
-  public function getUpdateForm($package_name, $admin = false, $id = null){
-    $package = $this->getFeature($package_name);
+		switch ($field['type']) {
+			case 'text':
+			case 'email':
+			case 'password':
+				$html .= '<input type="' . htmlspecialchars($field['type']) . '" name="' . htmlspecialchars($field['name']) . '" placeholder="' . $field['placeholder'] . '" value="' . $value . '" class="form-control"' . ($field['required'] ? ' required' : '') . '>';
+				break;
+			case 'file':
+			case 'upload':
+				$html .= '<input type="file" name="' . htmlspecialchars($field['name']) . '" placeholder="' . $field['placeholder'] . '" class="form-control"' . ($field['required'] ? ' required' : '') . ' accept="image/*" value="' . $value . '">';
+				break;
+			case 'select':
+				$html .= $this->generateSelectHtml($field, $value);
+				break;
+			case 'radio':
+				$html .= $this->generateRadioHtml($field, $value);
+				break;
+			case 'checkbox':
+				$html .= $this->generateCheckboxHtml($field, $value);
+				break;
+		}
 
-    $package_path = Application::$ROOT_DIR ."/vendor/" . $this->normalizePath($package['install-path'] . "/forms/admin.yml");
-    $formConfig = Yaml::parseFile($package_path);
-    return [
-      "type" => $formConfig['form']['type'],
-      "title" => "Update" . $formConfig['form']['title'],
-      "table" => $formConfig['form']['table'],
-      "form" => $this->generateFormFromYaml($package_path, $id)
-    ];
-  }
+		$html .= '</div>';
+		return $html;
+	}
 
-  function normalizePath($path) {
-    $parts = explode('/', $path);
-    $stack = [];
+	private function generateSelectHtml(array $field, ?string $value): string
+	{
+		$html = '<select name="' . htmlspecialchars($field['name']) . '" id="' . htmlspecialchars($field['name']) . '" class="form-control">';
+		foreach ($field['options'] as $option) {
+			$html .= '<option value="' . htmlspecialchars($option['value']) . '" ' . ($value === $option['value'] ? 'selected' : '') . '>' . htmlspecialchars($option['label']) . '</option>';
+		}
+		$html .= '</select>';
+		return $html;
+	}
 
-    foreach ($parts as $part) {
-        if ($part === '' || $part === '.') {
-            continue;
-        }
-        
-        if ($part === '..') {
-            if (!empty($stack)) {
-                array_pop($stack);
-            }
-        } else {
-            $stack[] = $part;
-        }
-    }
-    return implode('/', $stack);
-  }
+	private function generateRadioHtml(array $field, ?string $value): string
+	{
+		$html = '';
+		foreach ($field['options'] as $option) {
+			$html .= '<div class="form-check">';
+			$html .= '<input type="radio" name="' . htmlspecialchars($field['name']) . '" id="' . htmlspecialchars($field['name']) . '_' . htmlspecialchars($option['value']) . '" value="' . htmlspecialchars($option['value']) . '" class="form-check-input"' . ($value === $option['value'] ? ' checked' : '') . ($field['required'] ? ' required' : '') . '>';
+			$html .= '<label for="' . htmlspecialchars($field['name']) . '_' . htmlspecialchars($option['value']) . '" class="form-check-label">' . htmlspecialchars($option['label']) . '</label>';
+			$html .= '</div>';
+		}
+		return $html;
+	}
 
-  function getFormValue($table, $field, $id = null) {
-    if($id){
-      $stmt = Application::$app->db->fetch("SELECT $field FROM $table WHERE id = $id");
-      return $stmt[$field] ?? null;
-    } 
-    return null;
-  }
-
-  function generateFormFromYaml($yamlFile, $id = null)
-  {
-    // Parse the YAML file
-    $formConfig = Yaml::parseFile($yamlFile);
-    $table = $formConfig['form']['table'];
-
-    
-    // Start building the form HTML
-    $formHtml = '<form action="'. Application::$app->getBaseUrl().'/admin/extension/form-submit" method="POST"  enctype="multipart/form-data">';
-    if(!$id){
-      $formHtml .= '<h2>' . $formConfig['form']['title'] . '</h2>';
-      $formHtml .= '<p>' . $formConfig['form']['description'] . '</p>';
-    }
-    $formHtml .= '<input type="text" name="table" hidden value="' . $formConfig['form']['table'] . '" />';
-    $formHtml .= '<input type="text" name="type" hidden value="' . $formConfig['form']['type'] . '" />';
-    if($id){
-      $formHtml .= '<input type="text" name="id" hidden value="' . $id . '" />';
-    }
-
-
-    // Loop through the fields and generate HTML elements
-    foreach ($formConfig['form']['fields'] as $field) {
-        $formHtml .= '<div class="form-group">';
-        $formHtml .= '<label for="' . $field['name'] . '">' . $field['label'] . '</label>';
-
-        switch ($field['type']) {
-            case 'text':
-            case 'email':
-            case 'password':
-                $formHtml .= '<input type="' . $field['type'] . '" placeholder="' . $field['placeholder'] . '" name="' . $field['name'] . '" id="' . $field['name'] . '"';
-                if (!empty($field['required'])) {
-                    $formHtml .= ' required';
-                }
-                $formHtml .= ' value="' . $this->getFormValue($table, $field['name'], $id) .  '" ';
-                $formHtml .= ' class="form-control">';
-                break;
-            case 'file':
-            case 'upload':
-              $formHtml .= '<input type="file" name="' . $field['name'] . '" placeholder="' . $field['placeholder'] . '" id="' . $field['name'] . '"';
-              if (!empty($field['required'])) {
-                  $formHtml .= ' required';
-              }
-              $formHtml .= ' accept="image/*" value="' . $this->getFormValue($table, $field['name'], $id) .  '" ';
-              $formHtml .= ' class="form-control">';
-              break;
-
-            case 'select':
-                $formHtml .= '<select name="' . $field['name'] . '" id="' . $field['name'] . '" placeholder="' . $field['placeholder'] . '" class="form-control">';
-                foreach ($field['options'] as $option) {
-                    $formHtml .= '<option value="' . htmlspecialchars($option['value']) . '"  ' . ($this->getFormValue($table, $field['name'], $id) == htmlspecialchars($option['value']) ? "selected" : "") . '>' . htmlspecialchars($option['label']) . '</option>';
-                }
-                $formHtml .= '</select>';
-                break;
-
-            case 'radio':
-                foreach ($field['options'] as $option) {
-                    $formHtml .= '<div class="form-check">';
-                    $formHtml .= '<input type="radio" ' . ($this->getFormValue($table, $field['name'], $id) == htmlspecialchars($option['value']) ? "checked" : "") . ' name="' . $field['name'] . '" placeholder="' . $field['placeholder'] . '" id="' . $field['name'] . '_' . htmlspecialchars($option['value']) . '" value="' . htmlspecialchars($option['value']) . '"';
-                    if (!empty($field['required'])) {
-                      $formHtml .= ' required';
-                    }
-                    $formHtml .= ' class="form-check-input">';
-                    $formHtml .= '<label for="' . $field['name'] . '_' . htmlspecialchars($option['value']) . '" class="form-check-label">' . htmlspecialchars($option['label']) . '</label>';
-                    $formHtml .= '</div>';
-                }
-                break;
-
-            case 'checkbox':
-                if (!empty($field['options'])) {
-                    foreach ($field['options'] as $option) {
-                        $formHtml .= '<div class="form-check">';
-                        $formHtml .= '<input ' . ($this->getFormValue($table, $field['name'], $id) == htmlspecialchars($option['value']) ? "checked" : "") . ' type="checkbox" name="' . $field['name'] . '[]" id="' . $field['name'] . '" placeholder="' . $field['placeholder'] . '_' . htmlspecialchars($option) . '" value="' . htmlspecialchars($option) . '" class="form-check-input">';
-                        $formHtml .= '<label for="' . $field['name'] . '_' . htmlspecialchars($option) . '" class="form-check-label">' . htmlspecialchars($option) . '</label>';
-                        $formHtml .= '</div>';
-                    }
-                } else {
-                    $formHtml .= '<input type="checkbox" ' . ($this->getFormValue($table, $field['name'], $id) == htmlspecialchars($option['value']) ? "checked" : "") . ' name="' . $field['name'] . '" id="' . $field['name'] . '"';
-                    if (!empty($field['required'])) {
-                        $formHtml .= ' required';
-                    }
-                    $formHtml .= ' class="form-check-input">';
-                }
-                break;
-        }
-
-        $formHtml .= '</div>';
-    }
-
-    // Close the form and add a submit button
-    $formHtml .= '<button type="submit" class="btn btn-primary">Submit</button>';
-    $formHtml .= '</form>';
-
-    return $formHtml;
-}
+	private function generateCheckboxHtml(array $field, ?string $value): string
+	{
+		$html = '';
+		if (isset($field['options'])) {
+			foreach ($field['options'] as $option) {
+				$html .= '<div class="form-check">';
+				$html .= '<input type="checkbox" name="' . htmlspecialchars($field['name']) . '[]" id="' . htmlspecialchars($field['name']) . '_' . htmlspecialchars($option['value']) . '" value="' . htmlspecialchars($option['value']) . '" class="form-check-input"' . ($value === $option['value'] ? ' checked' : '') . '>';
+				$html .= '<label for="' . htmlspecialchars($field['name']) . '_' . htmlspecialchars($option['value']) . '" class="form-check-label">' . htmlspecialchars($option['label']) . '</label>';
+				$html .= '</div>';
+			}
+		} else {
+			$html .= '<input type="checkbox" name="' . htmlspecialchars($field['name']) . '" value="1" class="form-check-input"' . ($value ? ' checked' : '') . '>';
+			$html .= '<label class="form-check-label">' . htmlspecialchars($field['label']) . '</label>';
+		}
+		return $html;
+	}
 
 }

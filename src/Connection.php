@@ -7,101 +7,94 @@ use PDOException;
 
 class Connection
 {
-    private $connection;
-    private $host;
-    private $dbname;
-    private $dbport;
-    private $username;
-    private $password;
-    private $charset;
+    private PDO $connection;
+    private string $host;
+    private string $dbname;
+    private string $dbport;
+    private string $username;
+    private string $password;
+    private string $charset;
 
     public function __construct()
     {
-        // Load environment variables
         $this->loadEnv();
-
-        // Set connection parameters
-        $this->host = getenv('DB_HOST');
-        $this->dbname = getenv('DB_NAME');
-        $this->dbport = getenv('DB_PORT');
-        $this->username = getenv('DB_USER');
-        $this->password = getenv('DB_PASS');
-        $this->charset = getenv('DB_CHARSET') ?? 'utf8mb4';
-
-        // Establish the connection
+        $this->initializeDbConfig();
         $this->connect();
     }
 
-    private function loadEnv()
+    private function loadEnv(): void
     {
-        if (file_exists(Application::$ROOT_DIR . '/.env')) {
-          $lines = file(Application::$ROOT_DIR . '/.env');
-          foreach ($lines as $line) {
-            if (strpos(trim($line), '=') !== false) {
-              list($name, $value) = explode('=', $line, 2);
-              putenv(trim($name) . '=' . trim($value));
+        $envFilePath = Application::$ROOT_DIR . '/.env';
+        if (file_exists($envFilePath)) {
+            $lines = file($envFilePath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+            foreach ($lines as $line) {
+                if (strpos(trim($line), '=') !== false) {
+                    [$name, $value] = explode('=', $line, 2);
+                    putenv(trim($name) . '=' . trim($value));
+                }
             }
-          }
         }
     }
 
-    private function connect()
+    private function initializeDbConfig(): void
     {
-      try {
-        $dsn = "mysql:host={$this->host};port={$this->dbport};dbname={$this->dbname}";
-        $this->connection = new PDO($dsn, $this->username, $this->password);
-        $this->connection->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        $this->connection->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
-        return true;
-      } catch (PDOException $e) {
-        die('Database connection failed: ' . $e->getMessage());
-      }
+        $this->host = getenv('DB_HOST') ?: 'localhost';
+        $this->dbname = getenv('DB_NAME') ?: 'default_db';
+        $this->dbport = getenv('DB_PORT') ?: '3306';
+        $this->username = getenv('DB_USER') ?: 'root';
+        $this->password = getenv('DB_PASS') ?: '';
+        $this->charset = getenv('DB_CHARSET') ?: 'utf8mb4';
     }
 
-    public function getConnection()
+    private function connect(): void
     {
-      return $this->connection;
+        try {
+            $dsn = "mysql:host={$this->host};port={$this->dbport};dbname={$this->dbname};charset={$this->charset}";
+            $this->connection = new PDO($dsn, $this->username, $this->password);
+            $this->connection->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            $this->connection->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            throw new \RuntimeException('Database connection failed: ' . $e->getMessage());
+        }
     }
 
-    public function migrateSpecific($migration_name) {
-      try {
-        $migration = new Migration($this->connection, dirname(Application::$ROOT_DIR));
-        $migration->runSpecificMigration($migration_name);
-        return true;
-      } catch (PDOException $e) {
-        die('Migration failed: ' . $e->getMessage());
-      }
+    public function getConnection(): PDO
+    {
+        return $this->connection;
     }
 
-    public function migrateAll() {
-      try {
-        $migration = new Migration($this->connection, dirname(Application::$ROOT_DIR));
-        $migration->runMigrations();
-        return true;
-      } catch (PDOException $e) {
-        die('Migration failed: ' . $e->getMessage());
-      }
+    public function migrateSpecific(string $migrationName): bool
+    {
+        return $this->runMigration('runSpecificMigration', $migrationName);
     }
 
-    public function rollbackSpecific($migration_name) {
-      try {
-        $migration = new Migration($this->connection, dirname(Application::$ROOT_DIR));
-        $migration->rollbackSpecificMigration($migration_name);
-        return true;
-      } catch (PDOException $e) {
-        die('Migration failed: ' . $e->getMessage());
-      }
+    public function migrateAll(): bool
+    {
+        return $this->runMigration('runMigrations');
     }
 
-
-    public function rollbackAll() {
-      try {
-        $migration = new Migration($this->connection, dirname(Application::$ROOT_DIR));
-        $migration->rollbackMigration();
-        return true;
-      } catch (PDOException $e) {
-        die('Migration failed: ' . $e->getMessage());
-      }
+    public function rollbackSpecific(string $migrationName): bool
+    {
+        return $this->runMigration('rollbackSpecificMigration', $migrationName);
     }
 
+    public function rollbackAll(): bool
+    {
+        return $this->runMigration('rollbackMigration');
+    }
+
+    private function runMigration(string $method, ?string $migrationName = null): bool
+    {
+        try {
+            $migration = new Migration($this->connection, dirname(Application::$ROOT_DIR));
+            if ($migrationName !== null) {
+                $migration->{$method}($migrationName);
+            } else {
+                $migration->{$method}();
+            }
+            return true;
+        } catch (PDOException $e) {
+            throw new \RuntimeException('Migration failed: ' . $e->getMessage());
+        }
+    }
 }

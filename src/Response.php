@@ -6,9 +6,9 @@ use Salad\Core\Application;
 
 class Response
 {
-  public function redirect($url)
-  {
-    header("Location: $url");
-  }
+	public function redirect($url)
+	{
+		header("Location: $url");
+	}
 
 }
