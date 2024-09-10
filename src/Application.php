@@ -66,18 +66,21 @@ class Application
     protected function renderExtensions(array $sections): array
     {
         $style = "";
+        $script = "";
         foreach ($sections as $section) {
-            if ($section['type'] === "extension") {
-                $package = $this->extension->getFeature($section['section']);
-                $packagePath = self::$ROOT_DIR . "/vendor/" . $this->normalizePath($package['install-path']);
-                $this->view->addViewPath($packagePath . '/src/Views');
-                $style = file_get_contents($packagePath . "/src/Assets/" . $package['extra']['section']['style']);
-                $script = file_get_contents($packagePath . "/src/Assets/" . $package['extra']['section']['script']);
-            }
+			if($this->checkExtensionEnabled($section['section'])){
+				if ($section['type'] === "extension") {
+					$package = $this->extension->getFeature($section['section']);
+					$packagePath = self::$ROOT_DIR . "/vendor/" . $this->normalizePath($package['install-path']);
+					$this->view->addViewPath($packagePath . '/src/Views');
+					$style = file_get_contents($packagePath . "/src/Assets/" . $package['extra']['section']['style']);
+					$script = file_get_contents($packagePath . "/src/Assets/" . $package['extra']['section']['script']);
+				}
+			}
         }
         return [
 			"style" => $style,
-			"script" => $script?? "",
+			"script" => $script,
 		];
     }
 
@@ -112,4 +115,18 @@ class Application
         }
         return implode('/', $stack);
     }
+
+	public function checkExtensionEnabled(string $name): string
+	{
+		$name = strtoupper(preg_replace('/[^A-Za-z0-9]+/', '_', $name));
+		try {
+			if(isset($_ENV['EXTENSION_' . $name]) && $_ENV['EXTENSION_' . $name] === 'true'){
+			return true;
+			}
+			return false;
+		} catch (\Throwable $th) {
+			return false;
+		}
+	}
+
 }
