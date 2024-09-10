@@ -73,8 +73,8 @@ class Application
 					$package = $this->extension->getFeature($section['section']);
 					$packagePath = self::$ROOT_DIR . "/vendor/" . $this->normalizePath($package['install-path']);
 					$this->view->addViewPath($packagePath . '/src/Views');
-					$style = file_get_contents($packagePath . "/src/Assets/" . $package['extra']['section']['style']);
-					$script = file_get_contents($packagePath . "/src/Assets/" . $package['extra']['section']['script']);
+					$style = file_get_contents($packagePath . "/src/" . $package['extra']['section']['style']);
+					$script = file_get_contents($packagePath . "/src/" . $package['extra']['section']['script']);
 				}
 			}
         }
@@ -88,7 +88,9 @@ class Application
     {
         if ($section['type'] === "extension") {
             $package = $this->extension->getFeature($section['section']);
-            $this->view->render($package['extra']['section']['render']);
+			if($package && $this->checkExtensionEnabled($package['section'])){
+				$this->view->render($package['extra']['section']['render']);
+			}
         } elseif ($section['type'] === "content") {
             $content = $this->content->findById($section['section']);
             $this->view->render("template/site/chunk/content", ["data" => $content]);
