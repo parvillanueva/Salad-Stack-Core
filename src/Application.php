@@ -52,18 +52,18 @@ class Application
 
     public function renderPage(array $sections): void
     {
-        $style = $this->renderExtensions($sections);
-        $this->view->render("template/site/chunk/header", ["styles" => $style]);
+        $render = $this->renderExtensions($sections);
+        $this->view->render("template/site/chunk/header", ["styles" => $render['style']]);
         $this->view->render("template/site/chunk/navigation");
 
         foreach ($sections as $section) {
             $this->renderSection($section);
         }
 
-        $this->view->render("template/site/chunk/footer");
+        $this->view->render("template/site/chunk/footer", ["script" => $render['script']]);
     }
 
-    protected function renderExtensions(array $sections): string
+    protected function renderExtensions(array $sections): array
     {
         $style = "";
         foreach ($sections as $section) {
@@ -71,11 +71,14 @@ class Application
                 $package = $this->extension->getFeature($section['section']);
                 $packagePath = self::$ROOT_DIR . "/vendor/" . $this->normalizePath($package['install-path']);
                 $this->view->addViewPath($packagePath . '/src/Views');
-                $style = file_get_contents($packagePath . "/" . $package['extra']['section']['style']);
-                $this->view->addTwixExtension(new $package['extra']['section']['extension']);
+                $style = file_get_contents($packagePath . "/src/Assets/" . $package['extra']['section']['style']);
+                $script = file_get_contents($packagePath . "/src/Assets/" . $package['extra']['section']['script']);
             }
         }
-        return $style;
+        return [
+			"style" => $style,
+			"script" => $script,
+		];
     }
 
     protected function renderSection(array $section): void

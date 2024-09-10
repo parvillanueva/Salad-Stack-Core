@@ -47,6 +47,7 @@
 				new TwigFunction('parse_value', [$this, 'parseTableValue']),
 				new TwigFunction('get_update_form', [$this, 'getUpdateForm']),
 				new TwigFunction('get_site_menu', [$this, 'getSiteMenu']),
+				new TwigFunction('fetch_all', [$this, 'fetchAll']),
 			];
 		}
 
@@ -163,6 +164,11 @@
 		public function removeImgTags($content)
 		{
 			return preg_replace('/<img[^>]*>/i', '', $content);
+		}
+
+		public function fetchAll($table)
+		{
+			return $this->db->fetchAll("SELECT * FROM $table");
 		}
 
 		

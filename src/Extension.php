@@ -114,7 +114,7 @@ class Extension
 	private function getFormConfig(string $packageName): array
     {
         $package = $this->getFeature($packageName);
-        $packagePath = $this->VENDOR_DIR . Application::$app->normalizePath($package['install-path'] . "/forms/admin.yml");
+        $packagePath = $this->VENDOR_DIR . Application::$app->normalizePath($package['install-path'] . "/src/Forms/admin.yml");
         return Yaml::parseFile($packagePath);
     }
 
@@ -122,7 +122,7 @@ class Extension
 	{
 		$package = $this->getFeature($package_name);
 
-		$package_path = Application::$ROOT_DIR ."/vendor/" . Application::$app->normalizePath($package['install-path'] . "/forms/admin.yml");
+		$package_path = Application::$ROOT_DIR ."/vendor/" . Application::$app->normalizePath($package['install-path'] . "/src/Forms/admin.yml");
 		$formConfig = Yaml::parseFile($package_path);
 		return [
 			"type" => $formConfig['form']['type'],
@@ -136,7 +136,7 @@ class Extension
 	{
 		$package = $this->getFeature($package_name);
 
-		$package_path = Application::$ROOT_DIR ."/vendor/" . Application::$app->normalizePath($package['install-path'] . "/forms/admin.yml");
+		$package_path = Application::$ROOT_DIR ."/vendor/" . Application::$app->normalizePath($package['install-path'] . "/src/Forms/admin.yml");
 		$formConfig = Yaml::parseFile($package_path);
 		return [
 			"type" => $formConfig['form']['type'],
