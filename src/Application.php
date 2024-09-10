@@ -77,7 +77,7 @@ class Application
         }
         return [
 			"style" => $style,
-			"script" => $script,
+			"script" => $script?? "",
 		];
     }
 
